@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: printer-inventory
+  namespace: filament
+  labels:
+    app: printer-inventory
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: printer-inventory
+  template:
+    metadata:
+      labels:
+        app: printer-inventory
+    spec:
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: printer-inventory
+          image: app-image # set by kustomize in the deploy workflow
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            # In-cluster Spoolman. The app only ever GETs /api/v1/spool.
+            - name: SPOOLMAN_URL
+              value: http://spoolman.spoolman.svc:8000
+            - name: CACHE_SECONDS
+              value: "60"
+          resources:
+            requests:
+              memory: 48Mi
+              cpu: 5m
+            limits:
+              memory: 128Mi
+              cpu: 200m
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30

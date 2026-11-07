@@ -1,0 +1,6 @@
+.git
+.github
+k8s-resources
+node_modules
+*.md
+src/*.test.js

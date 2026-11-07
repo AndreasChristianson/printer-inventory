@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: printer-inventory
+  namespace: filament
+  labels:
+    app: printer-inventory
+spec:
+  selector:
+    app: printer-inventory
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

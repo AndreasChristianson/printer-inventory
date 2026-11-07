@@ -1,0 +1,83 @@
+name: Deploy
+
+# Only pushes to main deploy. Never add pull_request_target here: the repo is
+# public and KUBE_CONFIG must not be reachable from fork PRs.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test
+
+  build:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,format=long
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+      - name: Write kubeconfig
+        run: |
+          mkdir -p "${HOME}/.kube"
+          printf '%s' "${KUBE_CONFIG}" > "${HOME}/.kube/config"
+          chmod 600 "${HOME}/.kube/config"
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+      - name: Lower-case image name
+        run: echo "image=ghcr.io/${repo,,}" >> "${GITHUB_ENV}"
+        env:
+          repo: ${{ github.repository }}
+      - name: Apply manifests
+        working-directory: k8s-resources
+        run: |
+          kustomize edit set image "app-image=${image}:sha-${{ github.sha }}"
+          kubectl kustomize . | kubectl apply -f -
+      - name: Await rollout
+        run: |
+          kubectl rollout status \
+            -n filament \
+            deployment/printer-inventory \
+            --timeout=180s

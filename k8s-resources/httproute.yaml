@@ -1,0 +1,18 @@
+# Public, unauthenticated on purpose: the page is read only. The listener and
+# its certificate are owned by k8s-resources.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: printer-inventory
+  namespace: filament
+spec:
+  parentRefs:
+    - name: glowbox
+      namespace: envoy-gateway-system
+      sectionName: https-filament
+  hostnames:
+    - filament.pessimistic-it.com
+  rules:
+    - backendRefs:
+        - name: printer-inventory
+          port: 8080

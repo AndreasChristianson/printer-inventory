@@ -1,0 +1,15 @@
+{
+  "name": "printer-inventory",
+  "version": "1.0.0",
+  "description": "Public read-only dashboard of filament colors on hand, backed by Spoolman",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test src/*.test.js"
+  },
+  "license": "MIT"
+}

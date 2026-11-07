@@ -4,6 +4,7 @@ WORKDIR /app
 COPY package.json ./
 COPY src ./src
 COPY public ./public
-USER node
+# Numeric so the kubelet can verify runAsNonRoot (1000 is "node").
+USER 1000:1000
 EXPOSE 8080
 CMD ["node", "src/server.js"]

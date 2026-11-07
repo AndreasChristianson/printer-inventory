@@ -61,6 +61,10 @@ jobs:
       - uses: azure/setup-kubectl@v4
       - name: Write kubeconfig
         run: |
+          if [ -z "${KUBE_CONFIG}" ]; then
+            echo "::error::KUBE_CONFIG repo secret is not set"
+            exit 1
+          fi
           mkdir -p "${HOME}/.kube"
           printf '%s' "${KUBE_CONFIG}" > "${HOME}/.kube/config"
           chmod 600 "${HOME}/.kube/config"

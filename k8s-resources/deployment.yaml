@@ -16,6 +16,9 @@ spec:
         app: printer-inventory
     spec:
       enableServiceLinks: false
+      # Created in k8s-resources from a PAT with read:packages.
+      imagePullSecrets:
+        - name: dockerconfigjson-github-com
       securityContext:
         runAsNonRoot: true
         seccompProfile:
